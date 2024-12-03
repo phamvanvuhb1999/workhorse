@@ -1,0 +1,4 @@
+class Environment(object):
+    STAGING = "STAGING"
+    DEVELOPMENT = "DEVELOPMENT"
+    PRODUCTION = "PRODUCTION"
