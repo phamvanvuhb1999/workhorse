@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import Any
 
 from redis import Redis
@@ -36,8 +37,6 @@ class AIResourceManager(Singleton):
 
                 if matching_results:
                     scan_results = scan_results + [item.decode("utf-8") for item in matching_results]
-                else:
-                    break
 
                 if not cursor:
                     break
@@ -55,35 +54,41 @@ class AIResourceManager(Singleton):
                 for i in scan_results
                 for j in re.findall(model_pattern, i)
             ])
-
             return all_model_indexes - busy_model_indexes
 
     def assign_task(self, model_type, model_index, task_kwargs):
         from core.queueing.tasks.redis_ai import model_invoke
 
+        kwargs = {
+            **task_kwargs,
+            "model_type": model_type,
+            "model_index": model_index,
+        }
         model_invoke.apply(
-            kwargs={
-                "model_type": model_type,
-                "model_index": model_index,
-                **task_kwargs
-            }
+            kwargs=kwargs
         )
 
-    def run(self, model_type: str, task_id: str, *args, **kwargs):
+    def run(self, model_type: str, *args, **kwargs):
         available_models = self.get_available_model(model_type)
         if not available_models:
             raise ModelNotAvailable()
-        model_index = list(available_models)[0]
 
-        block_key: str = f"{model_type}:{model_index}:busy"
-        block_identify: str = task_id
+        model_index: str | None = None
+        block_key: str | None = None
 
-        if not self.redis_client.set(
-            name=block_key,
-            value=block_identify,
-            nx=True,
-            ex=settings.MODEL_INFERENCE_TIMEOUT,
-        ):
+        block_identify: str = str(uuid.uuid4())
+        for index in available_models:
+            block_key: str = f"{model_type}:{index}:busy"
+            if self.redis_client.set(
+                name=block_key,
+                value=block_identify,
+                nx=True,
+                ex=settings.MODEL_INFERENCE_TIMEOUT,
+            ):
+                model_index = index
+                break
+
+        if not model_index:
             raise ModelNotAvailable()
 
         self.assign_task(
@@ -95,3 +100,5 @@ class AIResourceManager(Singleton):
                 "block_identify": block_identify,
             },
         )
+
+        return block_key

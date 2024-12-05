@@ -1,0 +1,35 @@
+ocr:
+  drop_score: 0.5
+
+detection:
+  configs:
+    preprocess:
+      limit_side_len: 960
+      scale: 1./255.
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+      keep_keys:
+      - image
+      - shape
+    postprocess:
+      thresh: 0.3
+      max_candidates: 1000
+      min_size: 3
+      box_thresh: 0.6
+      unclip_ratio: 1.5
+
+recognition:
+  configs:
+    rec_batch_num: 24
+    character_dict_path: assets/ocr_keys.txt
+    use_space_char: True
+    rec_image_shape:
+      - 3
+      - 48
+      - 320

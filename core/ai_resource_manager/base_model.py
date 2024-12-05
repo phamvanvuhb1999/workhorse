@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import uuid
+import pickle
 from datetime import datetime, timedelta
 
 from functools import wraps
@@ -8,6 +9,7 @@ from typing import Any
 
 import redisai as rai
 
+from core.cache.sync_redis_client import SyncRedisClient
 from core.common.pattern.abstract import NotImplementRaiser
 from core.common.pattern.singleton import Singleton
 
@@ -104,14 +106,14 @@ class RedisAIModel(Singleton, NotImplementRaiser):
         return self.client.tensorget(key=key, **kwargs)
 
     def initiate(
-            self,
-            **kwargs,
+        self,
+        **kwargs,
     ):
         self._raise_not_implemented()
 
     def process(
-            self,
-            **kwargs,
+        self,
+        **kwargs,
     ):
         self._raise_not_implemented()
 
@@ -126,8 +128,19 @@ class RedisAIModel(Singleton, NotImplementRaiser):
         while True:
             response = await pubsub.get_message(ignore_subscribe_messages=True)
             if response:
-                return response.get("data")
+                data = pickle.loads(response.get("data"))
+                if data.get("is_finished"):
+                    return data
             elif datetime.now() - start_time > timedelta(seconds=waiting_time):
                 return "Time limit exceeded!"
             else:
                 await asyncio.sleep(0.01)
+
+    def release_model_lock(self, **kwargs):
+        block_key = kwargs.get("block_key")
+        block_identify = kwargs.get("block_identify")
+        if block_key and block_identify:
+            redis_client = SyncRedisClient.get_instance()
+
+            if redis_client.get(block_key).decode("utf-8") == block_identify:
+                redis_client.delete(key=block_key)
