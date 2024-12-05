@@ -6,17 +6,18 @@ import numpy as np
 from configs.common import BASE_DIR
 from core.ai_resource_manager import RedisAIModel
 from core.ai_resource_manager.models.utils.postprocess import CTCLabelDecode
-from core.ai_resource_manager.models.utils.preprocess import resize_norm_img
+from core.ai_resource_manager.models.utils.preprocess import resize_with_padding
 
 
 class SVTRCLNetRecognizerRedisModel(RedisAIModel):
+    model_key = "svtrcl_net"
+
     def __init__(
         self,
-        rec_batch_num: int = 6,
+        rec_batch_num: int = 12,
         character_dict_path: str = None,
         use_space_char: bool = True,
         rec_image_shape: list | None = None,
-        model_key: str = "svtrcl_net",
         drop_score: float = 0.5,
         *args, **kwargs
     ):
@@ -30,7 +31,6 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
         input_tensor_name = kwargs.get("input_tensor_name", "x")
         output_tensor_name = kwargs.get("output_tensor_name", "softmax_11.tmp_0")
 
-        self.model_key = model_key
         self.input_tensor_name = input_tensor_name
         self.output_tensor_name = output_tensor_name
         self.rec_batch_num = rec_batch_num
@@ -76,18 +76,19 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
                 wh_ratio = w * 1.0 / h
                 max_wh_ratio = max(max_wh_ratio, wh_ratio)
             for ino in range(beg_img_no, end_img_no):
-                norm_img = resize_norm_img(
-                    img=images[indices[ino]],
-                    max_wh_ratio=max_wh_ratio,
+                norm_img = resize_with_padding(
+                    image=images[indices[ino]],
+                    # max_wh_ratio=max_wh_ratio,
                 )
                 norm_img = norm_img[np.newaxis, :]
                 norm_img_batch.append(norm_img)
 
             norm_img_batch = np.concatenate(norm_img_batch)
-            norm_img_batch = norm_img_batch.copy()
+            # norm_img_batch = np.resize(norm_img_batch, [*norm_img_batch.shape[:-1], 320])
 
+            print(f"norm_img_batch shape {norm_img_batch.shape}")
             self.feed_model(key=self.input_tensor_name, tensor=norm_img_batch)
-            self.execute_model(key=self.model_key, inputs=[self.input_tensor_name,], outputs=[self.output_tensor_name, ])
+            self.execute_model(key=self.model_key, inputs=[self.input_tensor_name,], outputs=[self.output_tensor_name,])
 
             outputs = self.get_tensor_model(key=self.output_tensor_name)
             rec_result = self.decoder(outputs)
@@ -95,8 +96,7 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
                 rec_res[indices[beg_img_no + rno]] = rec_result[rno]
 
         # Release model lock
-        print(kwargs)
-        self.release_model_lock(**kwargs)
+        # self.release_model_lock(**kwargs)
 
         filter_boxes, filter_rec_res = [], []
         for box, rec_result in zip(dt_boxes, rec_res):

@@ -21,9 +21,9 @@ class AIResourceManager(Singleton):
 
         self.redis_client = Redis(host=host, port=port, db=db)
 
-    def get_available_model(self, model_prefix: str):
-        for prefix, item in RedisAIModel.get_submodels_map().items():
-            if prefix != model_prefix:
+    def get_available_model(self, model_type: str):
+        for prefix, model_class in RedisAIModel.get_submodels_map().items():
+            if prefix != model_type:
                 continue
 
             pattern = f"{prefix}:*"
@@ -41,7 +41,7 @@ class AIResourceManager(Singleton):
                 if not cursor:
                     break
 
-            model_pattern = rf'{prefix}:([0-9a-fA-F/\-]{{36}}):.*'
+            model_pattern = rf'{prefix}:([0-9a-fA-F/\-]{{36}}):{model_class.model_key}'
             all_model_indexes = set([
                 j
                 for i in scan_results
@@ -64,7 +64,7 @@ class AIResourceManager(Singleton):
             "model_type": model_type,
             "model_index": model_index,
         }
-        model_invoke.apply(
+        model_invoke.apply_async(
             kwargs=kwargs
         )
 
@@ -72,33 +72,34 @@ class AIResourceManager(Singleton):
         available_models = self.get_available_model(model_type)
         if not available_models:
             raise ModelNotAvailable()
+        model_index = list(available_models)[0]
 
-        model_index: str | None = None
-        block_key: str | None = None
-
-        block_identify: str = str(uuid.uuid4())
-        for index in available_models:
-            block_key: str = f"{model_type}:{index}:busy"
-            if self.redis_client.set(
-                name=block_key,
-                value=block_identify,
-                nx=True,
-                ex=settings.MODEL_INFERENCE_TIMEOUT,
-            ):
-                model_index = index
-                break
-
-        if not model_index:
-            raise ModelNotAvailable()
+        # model_index: str | None = None
+        # block_key: str | None = None
+        #
+        # block_identify: str = str(uuid.uuid4())
+        # for index in available_models:
+        #     block_key: str = f"{model_type}:{index}:busy"
+        #     if self.redis_client.set(
+        #         name=block_key,
+        #         value=block_identify,
+        #         nx=True,
+        #         ex=settings.MODEL_INFERENCE_TIMEOUT,
+        #     ):
+        #         model_index = index
+        #         break
+        #
+        # if not model_index:
+        #     raise ModelNotAvailable()
 
         self.assign_task(
             model_type=model_type,
             model_index=model_index,
             task_kwargs={
                 **kwargs,
-                "block_key": block_key,
-                "block_identify": block_identify,
+                # "block_key": block_key,
+                # "block_identify": block_identify,
             },
         )
 
-        return block_key
+        # return block_key

@@ -112,3 +112,32 @@ def resize_norm_img(img, max_wh_ratio, rec_image_shape=[3, 48, 320]):
     padding_im = np.zeros((imgC, imgH, imgW), dtype=np.float32)
     padding_im[:, :, 0:resized_w] = resized_image
     return padding_im
+
+
+def resize_with_padding(image, rec_image_shape=None):
+    if not rec_image_shape:
+        rec_image_shape = [3, 48, 320]
+    original_height, original_width, channels = image.shape
+    target_aspect_ratio = rec_image_shape[1] / rec_image_shape[2]
+
+    original_aspect_ratio = original_height / original_width
+
+    if original_aspect_ratio > target_aspect_ratio:
+        new_height = rec_image_shape[1]
+        new_width = int(new_height / original_height * original_width)
+    else:
+        new_width = rec_image_shape[2]
+        new_height = int(new_width / original_width * original_height)
+
+    # Resize the image
+    resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA).astype("float32")
+
+    top = (rec_image_shape[1] - new_height) // 2
+    bottom = rec_image_shape[1] - new_height - top
+    left = (rec_image_shape[2] - new_width) // 2
+    right = rec_image_shape[2] - new_width - left
+
+    padded_image = cv2.copyMakeBorder(resized_image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+
+    # # Convert the image to [3, 48, 320] (C, H, W format)
+    return np.transpose(padded_image, (2, 0, 1)) / 255

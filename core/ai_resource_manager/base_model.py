@@ -33,12 +33,14 @@ def prefix_generator(keys: list = None):
 
                 if k_val is not None:
                     prefix: str = getattr(args_cp[0], 'prefix')
+                    model_prefix: str = getattr(args_cp[0], 'model_prefix')
+                    model_key: str = getattr(args_cp[0], "model_key")
                     if isinstance(k_val, list):
                         k_val = [
                             f"{prefix}:{item}" for item in k_val
                         ]
                     else:
-                        k_val = f"{prefix}:{k_val}"
+                        k_val = f"{model_prefix if k_val == model_key else prefix}:{k_val}"
 
                     if key_in_kwargs:
                         kwargs_cp = {
@@ -73,9 +75,8 @@ class RedisAIModel(Singleton, NotImplementRaiser):
         self.max_tokens = max_tokens
         self.client = rai.Client(host=host, port=port, db=db)
 
-        if not prefix:
-            prefix = f"{self.class_prefix()}:{uuid.uuid4()}"
-        self.prefix = prefix
+        self.prefix = f"{self.class_prefix()}:{uuid.uuid4()}"
+        self.model_prefix = prefix if prefix else self.prefix
 
     @classmethod
     def class_prefix(cls):
@@ -89,13 +90,33 @@ class RedisAIModel(Singleton, NotImplementRaiser):
         }
 
     @prefix_generator()
-    def store_model(self, key: str, backend: str, device: str, data: Any, **kwargs):
+    def store_model(
+        self,
+        key: str,
+        backend: str,
+        device: str,
+        data: Any,
+        batch: Any = 8,
+        minbatch: Any = 1,
+        minbatchtimeout: Any = 300,
+        **kwargs
+    ):
         logger.info(f"Store model with {key}")
-        self.client.modelstore(key, backend=backend, device=device, data=data, **kwargs)
+        self.client.modelstore(
+            key,
+            backend=backend,
+            device=device,
+            data=data,
+            batch=batch,
+            minbatch=minbatch,
+            minbatchtimeout=minbatchtimeout,
+            **kwargs
+        )
 
     @prefix_generator()
     def feed_model(self, key: str, tensor: Any, **kwargs):
         self.client.tensorset(key, tensor=tensor, **kwargs)
+        self.client.expire(name=key, time=60)
 
     @prefix_generator(keys=["key", "inputs", "outputs"])
     def execute_model(self, key: str, inputs: list, outputs: list):
@@ -103,7 +124,9 @@ class RedisAIModel(Singleton, NotImplementRaiser):
 
     @prefix_generator()
     def get_tensor_model(self, key: str, **kwargs):
-        return self.client.tensorget(key=key, **kwargs)
+        result = self.client.tensorget(key=key, **kwargs)
+        self.client.expire(name=key, time=60)
+        return result
 
     def initiate(
         self,
@@ -130,6 +153,7 @@ class RedisAIModel(Singleton, NotImplementRaiser):
             if response:
                 data = pickle.loads(response.get("data"))
                 if data.get("is_finished"):
+                    print(data)
                     return data
             elif datetime.now() - start_time > timedelta(seconds=waiting_time):
                 return "Time limit exceeded!"

@@ -83,13 +83,13 @@ async def chat(data: ChatData):
 @app.post('/ocr', status_code=status.HTTP_200_OK)
 async def ocr(
     front: Annotated[UploadFile, File(...)],
-    # back: Annotated[UploadFile, File(...)]
+    back: Annotated[UploadFile, File(...)]
 ):
     await front.seek(0)
-    # await back.seek(0)
+    await back.seek(0)
 
     front_image = await front.read()
-    # back_image = await back.read()
+    back_image = await back.read()
 
     front_task_id = push_to_source_manager.apply_async(
         kwargs={
@@ -99,17 +99,17 @@ async def ocr(
         routing_key=QueueNames.WAITING,
         queue=QueueNames.WAITING
     )
-    # back_task_id = push_to_source_manager.apply_async(
-    #     kwargs={
-    #         "image": back_image,
-    #         "model_type": PaddleDetectorRedisModel.class_prefix(),
-    #     },
-    #     routing_key=QueueNames.WAITING,
-    #     queue=QueueNames.WAITING
-    # )
-    results = await asyncio.gather(
+    back_task_id = push_to_source_manager.apply_async(
+        kwargs={
+            "image": back_image,
+            "model_type": PaddleDetectorRedisModel.class_prefix(),
+        },
+        routing_key=QueueNames.WAITING,
+        queue=QueueNames.WAITING
+    )
+    await asyncio.gather(
         RedisAIModel.wait_for_response(key=str(front_task_id)),
-        # RedisAIModel.wait_for_response(key=str(back_task_id))
+        RedisAIModel.wait_for_response(key=str(back_task_id))
     )
     return {"is_finished": True}
 

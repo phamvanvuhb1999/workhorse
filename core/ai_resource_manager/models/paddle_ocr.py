@@ -15,6 +15,8 @@ from core.ai_resource_manager.models.utils.preprocess import resize_image, norma
 
 
 class PaddleDetectorRedisModel(RedisAIModel):
+    model_key = "paddle_detect"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -22,8 +24,6 @@ class PaddleDetectorRedisModel(RedisAIModel):
         postprocess = kwargs.get("postprocess", {})
         input_tensor_name = kwargs.get("input_tensor_name", "x")
         output_tensor_name = kwargs.get("output_tensor_name", "save_infer_model/scale_0.tmp_0")
-
-        self.model_key = "paddle_detect"
 
         self.input_tensor_name: str = input_tensor_name
         self.output_tensor_name: str = output_tensor_name
@@ -112,6 +112,7 @@ class PaddleDetectorRedisModel(RedisAIModel):
         img = np.expand_dims(img, axis=0)
         shape_list = np.expand_dims(shape_list, axis=0)
 
+        print(f"image shape {img.shape}")
         self.feed_model(key=self.input_tensor_name, tensor=img)
 
         # Execute model
@@ -120,7 +121,7 @@ class PaddleDetectorRedisModel(RedisAIModel):
         # Get output tensor
         outputs = self.get_tensor_model(key=self.output_tensor_name)
         # Should release model lock after get output tensor
-        self.release_model_lock(**kwargs)
+        # self.release_model_lock(**kwargs)
 
         if outputs is None:
             return
