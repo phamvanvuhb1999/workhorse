@@ -1,7 +1,9 @@
 import os
+from typing import Any
 
 import ml2rt
 import numpy as np
+import yaml
 
 from configs.common import BASE_DIR
 from core.ai_resource_manager import RedisAIModel
@@ -10,27 +12,32 @@ from core.ai_resource_manager.models.utils.preprocess import resize_norm_img
 
 
 class SVTRCLNetRecognizerRedisModel(RedisAIModel):
+    model_key: str = "svtrcl_net"
+
     def __init__(
         self,
-        rec_batch_num: int = 6,
-        character_dict_path: str = None,
-        use_space_char: bool = True,
-        rec_image_shape: list | None = None,
-        model_key: str = "svtrcl_net",
-        drop_score: float = 0.5,
+        config_path: str = None,
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
-        if not rec_image_shape:
-            rec_image_shape = [3, 48, 320]
-        if not character_dict_path:
-            character_dict_path = os.path.join(BASE_DIR, "assets/ocr_keys.txt")
+        config = {}
+        if not config_path:
+            config_path = os.path.join(BASE_DIR, "assets/ocr_config.yml")
+            if os.path.exists(config_path):
+                with open(config_path) as config_file:
+                    config.update(**yaml.safe_load(config_file)["recognition"]["configs"])
+        config.update(**kwargs)
+
+        rec_batch_num = config.get("rec_batch_num", 6)
+        character_dict_path = os.path.join(BASE_DIR, config.get("character_dict_path"))
+        use_space_char = config.get("use_space_char", True)
+        rec_image_shape = config.get("rec_image_shape", [3, 48, 320])
+        drop_score = config.get("drop_score", 0.5)
 
         input_tensor_name = kwargs.get("input_tensor_name", "x")
         output_tensor_name = kwargs.get("output_tensor_name", "softmax_11.tmp_0")
 
-        self.model_key = model_key
         self.input_tensor_name = input_tensor_name
         self.output_tensor_name = output_tensor_name
         self.rec_batch_num = rec_batch_num
@@ -52,7 +59,7 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
 
         self.store_model(key=self.model_key, backend=backend, device=device, data=en_model)
 
-    def process(self, images: np.ndarray, dt_boxes: list, **kwargs):
+    def process(self, images: np.ndarray, dt_boxes: list, client: Any, **kwargs):
         batch_num = self.rec_batch_num
         _, img_h, img_w = self.rec_image_shape[:3]
 
@@ -84,10 +91,10 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
                 norm_img_batch.append(norm_img)
 
             norm_img_batch = np.concatenate(norm_img_batch)
-            norm_img_batch = norm_img_batch.copy()
+            # norm_img_batch = norm_img_batch.copy()
 
             self.feed_model(key=self.input_tensor_name, tensor=norm_img_batch)
-            self.execute_model(key=self.model_key, inputs=[self.input_tensor_name,], outputs=[self.output_tensor_name, ])
+            self.execute_model(key=self.model_key, inputs=[self.input_tensor_name,], outputs=[self.output_tensor_name,])
 
             outputs = self.get_tensor_model(key=self.output_tensor_name)
             rec_result = self.decoder(outputs)
@@ -95,8 +102,7 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
                 rec_res[indices[beg_img_no + rno]] = rec_result[rno]
 
         # Release model lock
-        print(kwargs)
-        self.release_model_lock(**kwargs)
+        self.release_model_lock(client=client, **kwargs)
 
         filter_boxes, filter_rec_res = [], []
         for box, rec_result in zip(dt_boxes, rec_res):
@@ -112,21 +118,5 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
         }
 
 if __name__ == "__main__":
-    from redis import Redis
-    import cv2 as cv
-    from datetime import datetime
-
-    # svt_rec = SVTRCLNetRecognizerRedisModel.get_instance(prefix="svtrclnetrecognizerredismodel:00e6e07b-f05b-45a5-8093-f62b745c7cae:svtrcl_net")
-    # redis_cli = Redis()
-    # if not redis_cli.keys("svtrclnetrecognizerredisdodel:*"):
-    #     svt_rec.initiate()
-    # imgg = cv.imread(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", cv.IMREAD_GRAYSCALE)
-    # imgg = cv.cvtColor(imgg, cv.COLOR_GRAY2BGR)
-    # start_time = datetime.now()
-    # print(f"start time {start_time}")
-    # result = svt_rec.process(np.array([imgg]))
-    # print(f"end time: {datetime.now()}, executed time {datetime.now() - start_time}")
-    # print(result)
-
     svt_rec = SVTRCLNetRecognizerRedisModel.get_instance()
     svt_rec.initiate()

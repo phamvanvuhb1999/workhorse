@@ -1,6 +1,7 @@
 import copy
 
 import os
+from typing import Any
 
 import ml2rt
 import numpy as np
@@ -8,13 +9,23 @@ import cv2 as cv
 
 from configs.common import BASE_DIR
 from core.ai_resource_manager import RedisAIModel
-from core.ai_resource_manager.models.utils.postprocess import get_boxes_from_bitmap, filter_tag_det_res, sorted_boxes, \
-    get_rotate_crop_image
-from core.ai_resource_manager.models.utils.preprocess import resize_image, normalize_image, cvt_hwc_to_chw, \
-    get_data_by_keys
+from core.ai_resource_manager.models.utils.postprocess import (
+    get_boxes_from_bitmap,
+    filter_tag_det_res,
+    sorted_boxes,
+    get_rotate_crop_image,
+)
+from core.ai_resource_manager.models.utils.preprocess import (
+    resize_image,
+    normalize_image,
+    cvt_hwc_to_chw,
+    get_data_by_keys,
+)
 
 
 class PaddleDetectorRedisModel(RedisAIModel):
+    model_key = "paddle_detect"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -22,8 +33,6 @@ class PaddleDetectorRedisModel(RedisAIModel):
         postprocess = kwargs.get("postprocess", {})
         input_tensor_name = kwargs.get("input_tensor_name", "x")
         output_tensor_name = kwargs.get("output_tensor_name", "save_infer_model/scale_0.tmp_0")
-
-        self.model_key = "paddle_detect"
 
         self.input_tensor_name: str = input_tensor_name
         self.output_tensor_name: str = output_tensor_name
@@ -93,7 +102,7 @@ class PaddleDetectorRedisModel(RedisAIModel):
             boxes_batch.append({"points": boxes})
         return boxes_batch
 
-    def process(self, image: np.ndarray | bytes, **kwargs):
+    def process(self, image: np.ndarray | bytes, client: Any, **kwargs):
         from core.queueing.tasks import push_to_source_manager
         from core.ai_resource_manager import SVTRCLNetRecognizerRedisModel
 
@@ -120,7 +129,7 @@ class PaddleDetectorRedisModel(RedisAIModel):
         # Get output tensor
         outputs = self.get_tensor_model(key=self.output_tensor_name)
         # Should release model lock after get output tensor
-        self.release_model_lock(**kwargs)
+        self.release_model_lock(client=client, **kwargs)
 
         if outputs is None:
             return
@@ -155,24 +164,5 @@ class PaddleDetectorRedisModel(RedisAIModel):
 
 
 if __name__ == "__main__":
-    from redis import Redis
-    from datetime import datetime
-
-    # paddle_det = PaddleDetectorRedisModel.get_instance(prefix=f"{PaddleDetectorRedisModel.class_prefix()}:bb956221-c326-4d2b-a41a-7c4ae7a3ec5d")
-    # redis_cli = Redis()
-    # if not redis_cli.keys("paddledetectorredismodel:*"):
-    #     paddle_det.initiate()
-    # imgg = cv.imread(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", cv.IMREAD_GRAYSCALE)
-    # imgg = cv.cvtColor(imgg, cv.COLOR_GRAY2BGR)
-    # # with open(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", "rb") as f:
-    # #     data = f.read()
-    # #     image_array = np.frombuffer(data, np.uint8)
-    # #     image = cv.imdecode(image_array, cv.IMREAD_COLOR)
-    # start_time = datetime.now()
-    # print(f"start time {start_time}")
-    # result = paddle_det.process(imgg)
-    # print(f"end time: {datetime.now()}, executed time {datetime.now() - start_time}")
-    # # print(result)
-
     paddle_det = PaddleDetectorRedisModel.get_instance()
     paddle_det.initiate()

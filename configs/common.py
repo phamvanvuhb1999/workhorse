@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -85,6 +85,9 @@ class Config(BaseSettings):
     BROKER_VISIBLE_TIMEOUT: int = 3600
     SOCKET_KEEPALIVE_INTERVAL: int = 60
     SOCKET_KEEPALIVE_COUNT: int = 5
+
+    # Redis AI
+    REDIS_AI_HOSTS: List[str] = []
 
     TASK_ROUTING_FOOTPRINT_TIME: int = 3600
 

@@ -26,7 +26,7 @@ detection:
 
 recognition:
   configs:
-    rec_batch_num: 24
+    rec_batch_num: 12
     character_dict_path: assets/ocr_keys.txt
     use_space_char: True
     rec_image_shape:

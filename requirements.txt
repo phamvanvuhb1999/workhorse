@@ -48,3 +48,4 @@ opencv-python==4.10.0.84
 pyclipper==1.3.0.post6
 shapely==2.0.6
 python-multipart==0.0.19
+pyyaml==6.0.2
