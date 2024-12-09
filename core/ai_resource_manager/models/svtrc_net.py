@@ -78,15 +78,12 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
             for ino in range(beg_img_no, end_img_no):
                 norm_img = resize_with_padding(
                     image=images[indices[ino]],
-                    # max_wh_ratio=max_wh_ratio,
                 )
                 norm_img = norm_img[np.newaxis, :]
                 norm_img_batch.append(norm_img)
 
             norm_img_batch = np.concatenate(norm_img_batch)
-            # norm_img_batch = np.resize(norm_img_batch, [*norm_img_batch.shape[:-1], 320])
 
-            print(f"norm_img_batch shape {norm_img_batch.shape}")
             self.feed_model(key=self.input_tensor_name, tensor=norm_img_batch)
             self.execute_model(key=self.model_key, inputs=[self.input_tensor_name,], outputs=[self.output_tensor_name,])
 
@@ -94,9 +91,6 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
             rec_result = self.decoder(outputs)
             for rno in range(len(rec_result)):
                 rec_res[indices[beg_img_no + rno]] = rec_result[rno]
-
-        # Release model lock
-        # self.release_model_lock(**kwargs)
 
         filter_boxes, filter_rec_res = [], []
         for box, rec_result in zip(dt_boxes, rec_res):
@@ -112,21 +106,5 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
         }
 
 if __name__ == "__main__":
-    from redis import Redis
-    import cv2 as cv
-    from datetime import datetime
-
-    # svt_rec = SVTRCLNetRecognizerRedisModel.get_instance(prefix="svtrclnetrecognizerredismodel:00e6e07b-f05b-45a5-8093-f62b745c7cae:svtrcl_net")
-    # redis_cli = Redis()
-    # if not redis_cli.keys("svtrclnetrecognizerredisdodel:*"):
-    #     svt_rec.initiate()
-    # imgg = cv.imread(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", cv.IMREAD_GRAYSCALE)
-    # imgg = cv.cvtColor(imgg, cv.COLOR_GRAY2BGR)
-    # start_time = datetime.now()
-    # print(f"start time {start_time}")
-    # result = svt_rec.process(np.array([imgg]))
-    # print(f"end time: {datetime.now()}, executed time {datetime.now() - start_time}")
-    # print(result)
-
     svt_rec = SVTRCLNetRecognizerRedisModel.get_instance()
     svt_rec.initiate()

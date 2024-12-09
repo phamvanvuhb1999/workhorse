@@ -1,5 +1,4 @@
 import re
-import uuid
 from typing import Any
 
 from redis import Redis
@@ -42,19 +41,11 @@ class AIResourceManager(Singleton):
                     break
 
             model_pattern = rf'{prefix}:([0-9a-fA-F/\-]{{36}}):{model_class.model_key}'
-            all_model_indexes = set([
+            return [
                 j
                 for i in scan_results
                 for j in re.findall(model_pattern, i)
-            ])
-
-            model_pattern = f"{prefix}:([0-9a-fA-F\-]{{36}}):busy"
-            busy_model_indexes = set([
-                j
-                for i in scan_results
-                for j in re.findall(model_pattern, i)
-            ])
-            return all_model_indexes - busy_model_indexes
+            ]
 
     def assign_task(self, model_type, model_index, task_kwargs):
         from core.queueing.tasks.redis_ai import model_invoke
@@ -74,32 +65,10 @@ class AIResourceManager(Singleton):
             raise ModelNotAvailable()
         model_index = list(available_models)[0]
 
-        # model_index: str | None = None
-        # block_key: str | None = None
-        #
-        # block_identify: str = str(uuid.uuid4())
-        # for index in available_models:
-        #     block_key: str = f"{model_type}:{index}:busy"
-        #     if self.redis_client.set(
-        #         name=block_key,
-        #         value=block_identify,
-        #         nx=True,
-        #         ex=settings.MODEL_INFERENCE_TIMEOUT,
-        #     ):
-        #         model_index = index
-        #         break
-        #
-        # if not model_index:
-        #     raise ModelNotAvailable()
-
         self.assign_task(
             model_type=model_type,
             model_index=model_index,
             task_kwargs={
                 **kwargs,
-                # "block_key": block_key,
-                # "block_identify": block_identify,
             },
         )
-
-        # return block_key

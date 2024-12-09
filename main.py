@@ -8,7 +8,8 @@ from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from core.ai_resource_manager import RedisAIModel, PaddleDetectorRedisModel
+from core.ai_resource_manager import RedisAIModel
+from core.ai_resource_manager import PaddleDetectorRedisModel
 from core.ai_resource_manager import T5RedisModel
 from core.queueing.constants import QueueNames
 from core.serializers.chat import ChatData

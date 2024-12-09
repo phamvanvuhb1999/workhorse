@@ -8,10 +8,18 @@ import cv2 as cv
 
 from configs.common import BASE_DIR
 from core.ai_resource_manager import RedisAIModel
-from core.ai_resource_manager.models.utils.postprocess import get_boxes_from_bitmap, filter_tag_det_res, sorted_boxes, \
+from core.ai_resource_manager.models.utils.postprocess import (
+    get_boxes_from_bitmap,
+    filter_tag_det_res,
+    sorted_boxes,
     get_rotate_crop_image
-from core.ai_resource_manager.models.utils.preprocess import resize_image, normalize_image, cvt_hwc_to_chw, \
+)
+from core.ai_resource_manager.models.utils.preprocess import (
+    resize_image,
+    normalize_image,
+    cvt_hwc_to_chw,
     get_data_by_keys
+)
 
 
 class PaddleDetectorRedisModel(RedisAIModel):
@@ -112,7 +120,6 @@ class PaddleDetectorRedisModel(RedisAIModel):
         img = np.expand_dims(img, axis=0)
         shape_list = np.expand_dims(shape_list, axis=0)
 
-        print(f"image shape {img.shape}")
         self.feed_model(key=self.input_tensor_name, tensor=img)
 
         # Execute model
@@ -120,8 +127,6 @@ class PaddleDetectorRedisModel(RedisAIModel):
 
         # Get output tensor
         outputs = self.get_tensor_model(key=self.output_tensor_name)
-        # Should release model lock after get output tensor
-        # self.release_model_lock(**kwargs)
 
         if outputs is None:
             return
@@ -156,24 +161,5 @@ class PaddleDetectorRedisModel(RedisAIModel):
 
 
 if __name__ == "__main__":
-    from redis import Redis
-    from datetime import datetime
-
-    # paddle_det = PaddleDetectorRedisModel.get_instance(prefix=f"{PaddleDetectorRedisModel.class_prefix()}:bb956221-c326-4d2b-a41a-7c4ae7a3ec5d")
-    # redis_cli = Redis()
-    # if not redis_cli.keys("paddledetectorredismodel:*"):
-    #     paddle_det.initiate()
-    # imgg = cv.imread(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", cv.IMREAD_GRAYSCALE)
-    # imgg = cv.cvtColor(imgg, cv.COLOR_GRAY2BGR)
-    # # with open(r"/home/vupham/Downloads/WhatsApp Image 2024-12-03 at 15.07.55.jpeg", "rb") as f:
-    # #     data = f.read()
-    # #     image_array = np.frombuffer(data, np.uint8)
-    # #     image = cv.imdecode(image_array, cv.IMREAD_COLOR)
-    # start_time = datetime.now()
-    # print(f"start time {start_time}")
-    # result = paddle_det.process(imgg)
-    # print(f"end time: {datetime.now()}, executed time {datetime.now() - start_time}")
-    # # print(result)
-
     paddle_det = PaddleDetectorRedisModel.get_instance()
     paddle_det.initiate()
