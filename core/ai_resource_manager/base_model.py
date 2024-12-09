@@ -160,5 +160,6 @@ class RedisAIModel(Singleton, NotImplementRaiser):
         if block_key and block_identify:
             if not client:
                 client = self.client
-            if client.get(block_key).decode("utf-8") == block_identify:
+            value = client.get(block_key)
+            if value and value.decode("utf-8") == block_identify:
                 client.delete(block_key)

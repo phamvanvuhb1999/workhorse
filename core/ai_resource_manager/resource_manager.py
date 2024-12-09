@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import Any
 
 from redis import Redis
@@ -71,7 +72,7 @@ class AIResourceManager(Singleton):
             kwargs=kwargs
         )
 
-    def run(self, model_type: str, *args, **kwargs):
+    def run(self, model_type: str, lock_id: str, *args, **kwargs):
         scan_results = self.get_available_model(model_type)
         if all(not item.get("available_indexes") for item in scan_results):
             raise ModelNotAvailable()
@@ -80,13 +81,15 @@ class AIResourceManager(Singleton):
             identify: str = str(uuid.uuid4())
             for item in scan_data:
                 for index in item.get("available_indexes"):
-                    key = f"{model_type}:{index}:busy"
-                    if self.redis_client.set(
+                    key = f"{model_type}:{index}:{lock_id}:busy"
+                    if settings.REDIS_AI_INSTANCE_LOCK and not self.redis_client.set(
                         name=key,
                         value=identify,
                         nx=True,
                         ex=settings.MODEL_INFERENCE_TIMEOUT
                     ):
+                        continue
+                    else:
                         return index, item.get("config"), key, identify
             return None, None, None, None
 
@@ -99,6 +102,7 @@ class AIResourceManager(Singleton):
             model_index=model_index,
             task_kwargs={
                 **kwargs,
+                "lock_id": lock_id,
                 "block_key": block_key,
                 "block_identify": block_identify,
                 "instance_config": instance_config,

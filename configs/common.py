@@ -94,6 +94,11 @@ class Config(BaseSettings):
     # Message synchronize config
     MESSAGE_RESPONSE_ALLOW_DELAY_TIME: int = 60
 
+    # Lock will be applied for execution within request
+    REDIS_AI_SESSION_LOCK: bool = False
+    # Lock instance if needed
+    REDIS_AI_INSTANCE_LOCK: bool = False
+
     log_dir: str = "logs"
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 

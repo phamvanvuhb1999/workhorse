@@ -1,5 +1,6 @@
 import asyncio
 import os
+import uuid
 from typing import Annotated
 
 from fastapi import Request, UploadFile, File
@@ -91,10 +92,12 @@ async def ocr(
 
     front_image = await front.read()
     back_image = await back.read()
+    lock_id = uuid.uuid4() if settings.REDIS_AI_SESSION_LOCK else ""
 
     front_task_id = push_to_source_manager.apply_async(
         kwargs={
             "image": front_image,
+            "lock_id": lock_id,
             "model_type": PaddleDetectorRedisModel.class_prefix(),
         },
         routing_key=QueueNames.WAITING,
@@ -103,6 +106,7 @@ async def ocr(
     back_task_id = push_to_source_manager.apply_async(
         kwargs={
             "image": back_image,
+            "lock_id": lock_id,
             "model_type": PaddleDetectorRedisModel.class_prefix(),
         },
         routing_key=QueueNames.WAITING,
