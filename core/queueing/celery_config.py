@@ -28,11 +28,11 @@ worker_prefetch_multiplier = settings.WORKER_PREFETCH_MULTIPLIER
 
 worker_max_tasks_per_child = settings.WORKER_MAX_TASKS_PER_CHILD
 
-accept_content = ["application/json"]
 
-result_serializer = "json"
-
-task_serializer = "json"
+event_serializer = 'pickle'
+task_serializer = 'pickle'
+result_serializer = 'pickle'
+accept_content = ['application/json', 'application/x-python-serialize']
 
 enable_utc = settings.WORKER_ENABLE_UTC
 

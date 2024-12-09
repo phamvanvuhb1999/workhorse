@@ -9,6 +9,10 @@ from core.utils import T5InferenceHelper
 
 
 class T5RedisModel(RedisAIModel):
+    def __init__(self, max_tokens: int = 100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_tokens = max_tokens
+
     def initiate(
         self,
         backend: str = "torch",
@@ -27,7 +31,9 @@ class T5RedisModel(RedisAIModel):
         self.store_model(key="encoder", backend=backend, device=device, data=en_model)
         self.store_model(key='decoder', backend=backend, device=device, data=de_model)
 
-    def process(self, nparray):
+    def process(self, indices: list, **kwargs):
+        nparray = T5InferenceHelper.list2numpy(indices)
+
         # Set input tensor
         self.feed_model(key="sentence", tensor=nparray)
         self.feed_model(key="length", tensor=np.array([nparray.shape[0]]).astype(np.int64))

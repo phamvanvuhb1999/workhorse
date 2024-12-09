@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -86,10 +86,18 @@ class Config(BaseSettings):
     SOCKET_KEEPALIVE_INTERVAL: int = 60
     SOCKET_KEEPALIVE_COUNT: int = 5
 
+    # Redis AI
+    REDIS_AI_HOSTS: List[str] = []
+
     TASK_ROUTING_FOOTPRINT_TIME: int = 3600
 
     # Message synchronize config
     MESSAGE_RESPONSE_ALLOW_DELAY_TIME: int = 60
+
+    # Lock will be applied for execution within request
+    REDIS_AI_SESSION_LOCK: bool = False
+    # Lock instance if needed
+    REDIS_AI_INSTANCE_LOCK: bool = False
 
     log_dir: str = "logs"
     model_config = SettingsConfigDict(env_file=".env", extra="allow")

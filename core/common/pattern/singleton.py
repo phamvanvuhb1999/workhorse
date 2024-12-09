@@ -5,7 +5,7 @@ class Singleton(ABC):
     instance = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        pass
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
