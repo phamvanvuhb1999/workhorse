@@ -1,7 +1,9 @@
 import os
+from typing import Any
 
 import ml2rt
 import numpy as np
+import yaml
 
 from configs.common import BASE_DIR
 from core.ai_resource_manager import RedisAIModel
@@ -10,23 +12,28 @@ from core.ai_resource_manager.models.utils.preprocess import resize_with_padding
 
 
 class SVTRCLNetRecognizerRedisModel(RedisAIModel):
-    model_key = "svtrcl_net"
+    model_key: str = "svtrcl_net"
 
     def __init__(
         self,
-        rec_batch_num: int = 12,
-        character_dict_path: str = None,
-        use_space_char: bool = True,
-        rec_image_shape: list | None = None,
-        drop_score: float = 0.5,
+        config_path: str = None,
         *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
-        if not rec_image_shape:
-            rec_image_shape = [3, 48, 320]
-        if not character_dict_path:
-            character_dict_path = os.path.join(BASE_DIR, "assets/ocr_keys.txt")
+        config = {}
+        if not config_path:
+            config_path = os.path.join(BASE_DIR, "assets/ocr_config.yml")
+            if os.path.exists(config_path):
+                with open(config_path) as config_file:
+                    config.update(**yaml.safe_load(config_file)["recognition"]["configs"])
+        config.update(**kwargs)
+
+        rec_batch_num = config.get("rec_batch_num", 6)
+        character_dict_path = os.path.join(BASE_DIR, config.get("character_dict_path"))
+        use_space_char = config.get("use_space_char", True)
+        rec_image_shape = config.get("rec_image_shape", [3, 48, 320])
+        drop_score = config.get("drop_score", 0.5)
 
         input_tensor_name = kwargs.get("input_tensor_name", "x")
         output_tensor_name = kwargs.get("output_tensor_name", "softmax_11.tmp_0")
@@ -52,7 +59,7 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
 
         self.store_model(key=self.model_key, backend=backend, device=device, data=en_model)
 
-    def process(self, images: np.ndarray, dt_boxes: list, **kwargs):
+    def process(self, images: np.ndarray, dt_boxes: list, client: Any, **kwargs):
         batch_num = self.rec_batch_num
         _, img_h, img_w = self.rec_image_shape[:3]
 
@@ -91,6 +98,9 @@ class SVTRCLNetRecognizerRedisModel(RedisAIModel):
             rec_result = self.decoder(outputs)
             for rno in range(len(rec_result)):
                 rec_res[indices[beg_img_no + rno]] = rec_result[rno]
+
+        # Release model lock
+        self.release_model_lock(client=client, **kwargs)
 
         filter_boxes, filter_rec_res = [], []
         for box, rec_result in zip(dt_boxes, rec_res):

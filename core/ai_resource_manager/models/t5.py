@@ -9,6 +9,10 @@ from core.utils import T5InferenceHelper
 
 
 class T5RedisModel(RedisAIModel):
+    def __init__(self, max_tokens: int = 100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_tokens = max_tokens
+
     def initiate(
         self,
         backend: str = "torch",

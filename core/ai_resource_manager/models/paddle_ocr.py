@@ -1,6 +1,7 @@
 import copy
 
 import os
+from typing import Any
 
 import ml2rt
 import numpy as np
@@ -12,13 +13,13 @@ from core.ai_resource_manager.models.utils.postprocess import (
     get_boxes_from_bitmap,
     filter_tag_det_res,
     sorted_boxes,
-    get_rotate_crop_image
+    get_rotate_crop_image,
 )
 from core.ai_resource_manager.models.utils.preprocess import (
     resize_image,
     normalize_image,
     cvt_hwc_to_chw,
-    get_data_by_keys
+    get_data_by_keys,
 )
 
 
@@ -101,7 +102,7 @@ class PaddleDetectorRedisModel(RedisAIModel):
             boxes_batch.append({"points": boxes})
         return boxes_batch
 
-    def process(self, image: np.ndarray | bytes, **kwargs):
+    def process(self, image: np.ndarray | bytes, client: Any, **kwargs):
         from core.queueing.tasks import push_to_source_manager
         from core.ai_resource_manager import SVTRCLNetRecognizerRedisModel
 

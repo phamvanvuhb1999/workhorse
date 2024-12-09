@@ -4,6 +4,7 @@ from billiard.exceptions import SoftTimeLimitExceeded
 from billiard.exceptions import TimeLimitExceeded
 
 from core.ai_resource_manager import RedisAIModel
+from core.cache.sync_redis_client import SyncRedisClient
 from core.queueing import celery_app
 from core.queueing.constants import TaskNames, TaskRetryConfigs
 from core.ai_resource_manager.resource_manager import AIResourceManager
@@ -41,8 +42,12 @@ def model_invoke(
 ):
     model_class = RedisAIModel.get_submodels_map().get(model_type)
     if model_class is not None:
-        model = model_class.get_instance(prefix=f"{model_class.class_prefix()}:{model_index}")
-        result = model.process(**kwargs)
+        instance_config = kwargs.get("instance_config", {})
+        model = model_class.get_instance(
+            model_prefix=f"{model_class.class_prefix()}:{model_index}",
+            **instance_config
+        )
+        result = model.process(client=SyncRedisClient.get_instance().client, **kwargs)
 
         task_channel = kwargs.get("reply_id", "all")
-        model.client.publish(str(task_channel), message=pickle.dumps(result))
+        SyncRedisClient.get_instance().client.publish(str(task_channel), message=pickle.dumps(result))
