@@ -8,8 +8,19 @@ services:
     - .:/app
     links:
     - redisai
-    command: bash ./scripts/start-dev.sh
-  redisai:
+    command: bash ./scripts/start.sh
+
+  redisai1:
     image: redislabs/redisai:edge-cpu-bionic
     ports:
       - "6379:6379"
+  redisai2:
+    image: redislabs/redisai:edge-cpu-bionic
+    ports:
+      - "6380:6379"
+
+  worker:
+    build: .
+    volumes:
+    - .:/app
+    command: bash ./scripts/celery_worker.sh

@@ -1,24 +1,29 @@
-# ChatBot Demo
+# Resource Management with Redis AI 
 An example that showcases the benefit of running AI inside Redis.
 
-This repository contains the backend web app built with Flask, front end built with Angular (compiled to native JS) and the model files required for the chatbot to work. Follow below steps to bring the chatbot up.
+This repository references from [Chat Bot Demo](https://github.com/RedisAI/ChatBotDemo). I recommend checkout the parent
+repo to have the overview of Redis AI.
 
 ## Architecture
-When the flask application starts, [it will set an initial](https://github.com/RedisAI/ChatBotDemo/blob/master/redis_db.py#L23) `hidden` tensor.  This `hidden` tensor represents the intermediate state of the conversation.  On each new message received, an `sentence` tensor and the `hidden` tensor are passed through the model, which in turn produces an `output` and overrides the `hidden` tensor with the new intermediate state.
+![RedisAI Resource Manager](static/redisai-resource-maner.png)
 
-![ChatBot Flow](static/sequence-diagram.png)
-
-(Note this diagram is simplified, the full flow can be followed [here](https://github.com/RedisAI/ChatBotDemo/blob/master/redis_db.py))
+Instead of direct invoke model in APIs, our solution is routing task to most efficient model on all Redis AI instance, and allow locking if needed.
+This make our system horizontally scalable.
+It can describe by bellow steps:
+- Step 1: User receive user request, push is to 'Resource Manager Queue', and waiting for response on task Redis PubSub channel (which is task id).
+- Step 2: Worker pick up the task and find best host/model. If model be found, create new invoke task and push to invoke queue with model and host information. If not the task will be retried until one available.
+- Step 3: Workers will pick the invoke task and process it. The invoking will include multiple tensor feed, invoke call to the Redis AI base on the AI model that need to run. After finished, result will be push back to API by Redis PubSub.
+- Step 4: API return response to user if is final response.
 
 ## Requirements
 * Docker
 * Docker-compose
 
-## Running the demo
+## Running
 
 ```
-$ git clone git@github.com:RedisAI/ChatBotDemo.git
-$ cd ChatBotDemo
+$ git clone https://github.com/phamvanvuhb1999/workhorse.git
+$ cd workhorse
 $ docker-compose up
 ```
 
@@ -29,24 +34,9 @@ Try out the API (we have only one API endpoint -> `/chat` which accepts `message
 curl http://localhost:5000/chat -H "Content-Type: application/json" -d '{"message": "I am crazy"}'
 ```
 
-### CLI
-Open a second terminal and inspect the keys:
-
-```
-$ redis-cli
-127.0.0.1:6379> keys *
-1) "d_output"
-2) "decoder"
-3) "hidden"
-4) "encoder"
-5) "e_output"
-6) "d_input"
-7) "sentence"
-127.0.0.1:6379> type hidden
-AI_TENSOR
-```
+After that, you could try with '/orc' API to see the resource manager be implemented with Celery work.
 
 ### UI
-Open a browser and point it to `http://localhost:5000`.
+Open a browser and point it to `http://localhost:5000`, you'll see the chat view that still be keep from the parent repo.
 
 ![RedisAI chatbot demo with pytorch](static/screenshot.png)
