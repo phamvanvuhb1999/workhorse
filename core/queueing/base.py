@@ -9,12 +9,10 @@ from celery import Task
 from configs.common import settings
 from core.queueing.constants import TrackingCategories
 from core.queueing.utils import TaskRateLimit
-from core.queueing.utils import TaskTracking
 
 
 logger = logging.getLogger(__name__)
 
-task_tracker = TaskTracking(time_window=settings.STATISTIC_TRACKING_TIME_WINDOW)
 
 circuit_breaker_limiter = TaskRateLimit(time_window=settings.QUEUES_TRACKING_TIME_WINDOW)
 

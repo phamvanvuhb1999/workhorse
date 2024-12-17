@@ -11,8 +11,8 @@ Instead of direct invoke model in APIs, our solution is routing task to most eff
 This make our system horizontally scalable.
 It can describe by bellow steps:
 - Step 1: User receive user request, push is to 'Resource Manager Queue', and waiting for response on task Redis PubSub channel (which is task id).
-- Step 2: Worker pick up the task and find best host/model. If model be found, create new invoke task and push to invoke queue with model and host information. If not the task will be retried until one available.
-- Step 3: Workers will pick the invoke task and process it. The invoking will include multiple tensor feed, invoke call to the Redis AI base on the AI model that need to run. After finished, result will be push back to API by Redis PubSub.
+- Step 2: Worker pick up the task and find best host/model. If model be found, create new invoke task and push to invoke queue with model and host information. If not, the task will be retried until one available.
+- Step 3: Workers will pick the invoke task and process it. The invoking will include multiple tensor feed, invoke calls to the Redis AI base on the AI model that need to run. After finished, result will be push back to API by Redis PubSub.
 - Step 4: API return response to user if is final response.
 
 ## Requirements

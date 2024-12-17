@@ -21,3 +21,7 @@ class TokenExpiringKeyGen(KeyGenerator):
 
 class QueueTrackingKeyGen(KeyGenerator):
     collection_key = "queue_tracking"
+
+
+class RedisAIModelKeyGen(KeyGenerator):
+    collection_key = "redis_ai_key_gen"

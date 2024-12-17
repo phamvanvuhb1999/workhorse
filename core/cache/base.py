@@ -156,3 +156,15 @@ class BaseRedisClient(Singleton, NotImplementRaiser):
 
     async def async_flushdb(self, *args, **kwargs):
         self._raise_not_implemented()
+
+    def zincrby(self, *args, **kwargs):
+        self._raise_not_implemented()
+
+    async def async_zincrby(self, *args, **kwargs):
+        self._raise_not_implemented()
+
+    def zrange(self, key, *arsg, **kwargs):
+        self._raise_not_implemented()
+
+    async def async_zrange(self, key, *arsg, **kwargs):
+        self._raise_not_implemented()
