@@ -1,3 +1,4 @@
+import contextlib
 import logging
 from datetime import datetime
 
@@ -35,6 +36,30 @@ class TaskTracking:
     def count(self, tracking_key: str):
         max_score: str = self.get_max_score()
         return self.cache_client.zcard(tracking_key, with_validate=True, max_score=max_score)
+
+
+class OrderingTracking:
+    def __init__(self, time_window: int = 10, **kwargs):
+        self.time_window = time_window
+        self.cache_client = SyncRedisClient.get_instance(**kwargs)
+
+    def incr(self, tracking_key: str, model_id: str, amount: float = 1, **kwargs):
+        return self.cache_client.zincrby(key=tracking_key, amount=amount, value=model_id, **kwargs)
+
+    def decr(self, tracking_key: str, model_id: str, amount: float = 1, **kwargs):
+        return self.cache_client.zincrby(key=tracking_key, amount=-amount, value=model_id, **kwargs)
+
+    def range_by_score(self, tracking_key: int, batch_num: int = 10):
+        start_index = 0
+
+        while True:
+            end_index = start_index + batch_num
+            result = self.cache_client.zrange(key=tracking_key, start=start_index, end=end_index)
+            with contextlib.suppress(Exception):
+                yield result
+            if not result:
+                break
+            start_index = end_index + 1
 
 
 class TaskRateLimit(TaskTracking):

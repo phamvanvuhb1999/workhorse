@@ -14,6 +14,7 @@ class QueueNames:
 class TaskNames(Enum):
     MODEL_INVOKE: str = "model_invoke"
     PUSH_TO_RESOURCE_MANAGER: str = "push_to_resource_manager"
+    MODEL_RESPONSE_TIME_ORDER: str = "model_response_time_order"
 
 
 class TaskRetryConfigs:

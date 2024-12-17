@@ -64,6 +64,8 @@ class Config(BaseSettings):
     QUEUES_TRACKING_TIME_WINDOW: int = 10  # each 10 seconds
     STATISTIC_TRACKING_TIME_WINDOW: int = 86400  # 1 day
 
+    AI_ROUTING_TRACKING_TIME_WINDOW: int = 10
+
     # Worker and task config envs
     WORKER_CONCURRENCY: int | None = None
     WORKER_PREFETCH_MULTIPLIER: int = 4

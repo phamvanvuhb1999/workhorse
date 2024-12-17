@@ -128,3 +128,9 @@ class SyncRedisClient(BaseRedisClient):
 
     def exists(self, key, *args, **kwargs):
         return self.client.exists(key, **kwargs)
+
+    def zincrby(self, key, *args, **kwargs):
+        return self.client.zincrby(key, **kwargs)
+
+    def zrange(self, key, *args, **kwargs):
+        return self.client.zrange(key, *args, **kwargs)
