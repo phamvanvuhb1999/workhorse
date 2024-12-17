@@ -93,6 +93,9 @@ class AIResourceManager(Singleton):
                 if idx.decode("utf-8") in scan_data
             ] if initialized else scan_data.keys()
 
+            for m_id in set(scan_data.keys()) - set(model_indexes):
+                tracker.incr(tracking_key=tracking_key, model_id=m_id, amount=0)
+
             for model_idx in model_indexes:
                 key = f"{model_type}:{model_idx}:{lock_id}:busy"
                 if settings.REDIS_AI_INSTANCE_LOCK and not self.redis_client.set(
