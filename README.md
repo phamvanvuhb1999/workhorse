@@ -10,8 +10,8 @@ repo to have the overview of Redis AI.
 Instead of direct invoke model in APIs, our solution is routing task to most efficient model on all Redis AI instance, and allow locking if needed.
 This make our system horizontally scalable.
 It can describe by bellow steps:
-- Step 1: User receive user request, push is to 'Resource Manager Queue', and waiting for response on task Redis PubSub channel (which is task id).
-- Step 2: Worker pick up the task and find best host/model. If model be found, create new invoke task and push to invoke queue with model and host information. If not, the task will be retried until one available.
+- Step 1: APIs receive user requests, push them to 'Resource Manager Queue', and waiting for response on Redis PubSub channel with task_id.
+- Step 2: Worker pick up the task and find the best host/model. If the model be found, then create new invoking task and push to it invoke queue with model and host information. If not, the task will be retried until one available.
 - Step 3: Workers will pick the invoke task and process it. The invoking will include multiple tensor feed, invoke calls to the Redis AI base on the AI model that need to run. After finished, result will be push back to API by Redis PubSub.
 - Step 4: API return response to user if is final response.
 
